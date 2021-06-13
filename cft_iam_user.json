@@ -1,0 +1,48 @@
+{
+    "AWSTemplateFormatVersion" : "2010-09-09",
+    "Description" : "AWS CloudFormation - Create IAM user",
+    "Resources": {
+        "myuser" : {
+            "Type" : "AWS::IAM::User",
+            "Properties" : {
+                "DeletionPolicy": "Retain",
+                "Path" : "/",
+                "LoginProfile" : {
+                    "Password": "{{resolve:ssm-secure:IAMUserPassword:1}}"
+                },
+            "Policies" : [ {
+                "PolicyName" : "giveaccesstoqueueonly",
+                "PolicyDocument" : {
+                    "Version": "2012-10-17",
+                        "Statement" : [ 
+                        {
+                            "Effect" : "Allow",
+                            "Action" : [ "sqs:*" ],
+                            "Resource" : "arn:aws:sqs:ap-southeast-1:090039774206:sinsqsqueue1"
+                        }, 
+                        {
+                            "Effect" : "Deny",
+                            "Action" : [ "sqs:*" ],
+                            "NotResource" : "arn:aws:sqs:ap-southeast-1:090039774206:sinsqsqueue1"
+                        }
+                ] 
+                }
+      }, {
+         "PolicyName" : "giveaccesstotopiconly",
+         "PolicyDocument" : {
+            "Version": "2012-10-17",
+            "Statement" : [ {
+               "Effect" : "Allow",
+               "Action" : [ "sns:*" ],
+               "Resource" : "{{resolve:ssm:SNSarn1:1}}"
+            }, {
+               "Effect" : "Deny",
+               "Action" : [ "sns:*" ],
+               "NotResource" : "{{resolve:ssm:SNSarn1:1}}"
+            } ]
+         }
+      } ]
+   }
+} 
+}
+}

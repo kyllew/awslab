@@ -1,0 +1,414 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "Create 4 EC2 instances as Web service (Red, Yellow. Blue, Green)",
+
+  "Parameters" : {
+    "KeyName": {
+      "Description" : "Existing EC2 KeyPair :",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "ConstraintDescription" : "Can contain only ASCII characters."
+    },
+    "RoleName" : {
+      "Description" : "EC2 role name",
+      "Type" : "String",
+      "ConstraintDescription" : "Please specify your IAM role for EC2"
+    },
+    "CidrVpc" : {
+      "Type" : "String",
+      "Default" : "10.30.0.0/16",
+      "Description" : "Enter CIDR /16 for VPC : ."
+    },
+    "PublicSubnet1" : {
+      "Type" : "String",
+      "Default" : "10.30.1.0/24",
+      "Description" : "Enter CIDR for subnet-1 : ."
+    },
+    "PublicSubnet2" : {
+      "Type" : "String",
+      "Default" : "10.30.2.0/24",
+      "Description" : "Enter CIDR for subnet-2 : ."
+    }
+  },
+
+  "Resources" : {
+    "cftvpc": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+          "CidrBlock": {
+              "Ref": "CidrVpc"
+          },
+          "EnableDnsHostnames" : "true",
+          "EnableDnsSupport" : "true",
+          "Tags": [
+              {
+                  "Key": "Name",
+                  "Value": "cft.vpc"
+              }
+          ]
+      },
+      "Metadata": {
+          "AWS::CloudFormation::Designer": {
+              "id": "e7306972-eb5f-4291-9c63-fcbf8a4a04fe"
+          }
+      }
+    },
+    "pubsubnet1": {
+      "Type": "AWS::EC2::Subnet",
+      "DeletionPolicy": "Delete",
+      "Properties": {
+          "AvailabilityZone":    {
+            "Fn::Select" : 
+            [ "0", { "Fn::GetAZs" : "" }]
+          },
+          "CidrBlock": {
+              "Ref": "PublicSubnet1"
+          },
+          "MapPublicIpOnLaunch": "True",
+          "Tags": [
+              {
+                  "Key": "Name",
+                  "Value": "public1.cft.subnet"
+              }
+          ],
+          "VpcId": {
+              "Ref": "cftvpc"
+          }
+      },
+      "Metadata": {
+          "AWS::CloudFormation::Designer": {
+              "id": "60f8a865-48b9-4ce6-b251-17e816c12603"
+          }
+      }
+    },
+    "cftpublicrt": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+          "VpcId": {
+              "Ref": "cftvpc"
+          },
+          "Tags": [
+              {
+                  "Key": "Name",
+                  "Value": "public.cft.rt"
+              }
+          ]
+      },
+      "Metadata": {
+          "AWS::CloudFormation::Designer": {
+              "id": "109c3892-1cdc-47be-853a-97b235ba83d0"
+          }
+      }
+    },
+    "SubnetAssoc1": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+          "RouteTableId": {
+              "Ref": "cftpublicrt"
+          },
+          "SubnetId": {
+              "Ref": "pubsubnet1"
+          }
+      },
+      "Metadata": {
+          "AWS::CloudFormation::Designer": {
+              "id": "f84122bc-5875-42a8-b450-6e36a91c29f7"
+          }
+      }
+    },
+    "pubroute1": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+          "RouteTableId": {
+              "Ref": "cftpublicrt"
+          },
+          "DestinationCidrBlock": "0.0.0.0/0",
+          "GatewayId": {
+              "Ref": "cftigw"
+          }
+      },
+      "Metadata": {
+          "AWS::CloudFormation::Designer": {
+              "id": "a4244528-38a8-4598-868d-c56e4c762fc2"
+          }
+      }
+    },
+    "cftigw": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+          "Tags": [
+              {
+                  "Key": "Name",
+                  "Value": "cft.igw"
+              }
+          ]
+      },
+      "Metadata": {
+          "AWS::CloudFormation::Designer": {
+              "id": "71ad4f43-5803-4c59-a7c6-fbd60994e63a"
+          }
+      }
+    },
+    "AttachGateway": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+          "VpcId": {
+              "Ref": "cftvpc"
+          },
+          "InternetGatewayId": {
+              "Ref": "cftigw"
+          }
+      },
+      "Metadata": {
+          "AWS::CloudFormation::Designer": {
+              "id": "419aef3e-377b-48e8-8e69-5041cadf2dc5"
+          }
+      }
+    },
+    "pubsubnet2": {
+      "Type": "AWS::EC2::Subnet",
+      "Metadata": {
+          "AWS::CloudFormation::Designer": {
+              "id": "d86fe78f-eece-4e7e-89b7-9c99dc16aba0"
+          }
+      },
+      "Properties": {
+          "AvailabilityZone":    {
+            "Fn::Select" : 
+            [ "1", { "Fn::GetAZs" : "" }]
+          },
+          "CidrBlock": {
+              "Ref": "PublicSubnet2"
+          },
+          "MapPublicIpOnLaunch": "True",
+          "Tags": [
+              {
+                  "Key": "Name",
+                  "Value": "public2.cft.subnet"
+              }
+          ],
+          "VpcId": {
+              "Ref": "cftvpc"
+          }
+      }
+    },
+    "SubnetAssoc2": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+          "RouteTableId": {
+              "Ref": "cftpublicrt"
+          },
+          "SubnetId": {
+              "Ref": "pubsubnet2"
+          }
+      },
+      "Metadata": {
+          "AWS::CloudFormation::Designer": {
+              "id": "7425b94a-5fd1-4ea7-9dbb-22cfb15210b3"
+          }
+      }
+    },
+    "InstanceProfile" : {
+        "Type" : "AWS::IAM::InstanceProfile",
+        "Properties" : {
+          "Path" : "/",
+          "Roles" : [{"Ref" : "RoleName"}]
+        }
+    },
+    "RedENI" : {
+      "Type" : "AWS::EC2::NetworkInterface",
+      "Properties" : {
+        "SubnetId": {
+          "Ref": "pubsubnet1"},
+        "GroupSet": [{"Fn::GetAtt" : [ "WebServerSecurityGroup" , "GroupId" ]}]
+      }
+    },
+    "YellowENI" : {
+      "Type" : "AWS::EC2::NetworkInterface",
+      "Properties" : {
+        "SubnetId": {
+          "Ref": "pubsubnet1"},
+        "GroupSet": [{"Fn::GetAtt" : [ "WebServerSecurityGroup" , "GroupId" ]}]
+      }
+    },
+    "GreenENI" : {
+      "Type" : "AWS::EC2::NetworkInterface",
+      "Properties" : {
+        "SubnetId": {
+          "Ref": "pubsubnet2"},
+        "GroupSet": [{"Fn::GetAtt" : [ "WebServerSecurityGroup" , "GroupId" ]}]
+      }
+    },
+    "BlueENI" : {
+      "Type" : "AWS::EC2::NetworkInterface",
+      "Properties" : {
+        "SubnetId": {
+          "Ref": "pubsubnet2"},
+        "GroupSet": [{"Fn::GetAtt" : [ "WebServerSecurityGroup" , "GroupId" ]}]
+      }
+    },
+    "RedInstance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId" : "ami-03ca998611da0fe12",
+        "InstanceType"   : "t3.micro",
+        "IamInstanceProfile" : {"Ref" : "InstanceProfile"},
+        "NetworkInterfaces" : [ {"NetworkInterfaceId" : {"Ref" : "RedENI"}, "DeviceIndex" : "0" } ],
+        "KeyName"        : {"Ref" : "KeyName"},
+        "Tags": [
+          {
+              "Key": "Name",
+              "Value": "red.ec2"
+          }],
+        "UserData": {
+            "Fn::Base64": {
+              "Fn::Join": [
+                "\n",
+                [
+                  "#!/bin/bash",
+                  "yum update -y",
+                  "yum install httpd -y",
+                  "yum install tcpdump -y",
+                  "service httpd start",
+                  "/etc/init.d/httpd start",
+                  "chkconfig --levels 235 httpd on",
+                  "cd /var/www/html",
+                  "echo \"<html><body style=\\\"background-color:red;\\\"><h1><p style=\\\"color:#FFFFFF\\\">Hello Cloud Welcome To My Webpage</h1></body></html>\" > index.html"
+                ]
+              ]
+            }
+        }
+      }
+    },
+    "YellowInstance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId" : "ami-03ca998611da0fe12",
+        "InstanceType"   : "t3.micro",
+        "IamInstanceProfile" : {"Ref" : "InstanceProfile"},
+        "NetworkInterfaces" : [ {"NetworkInterfaceId" : {"Ref" : "YellowENI"}, "DeviceIndex" : "0" } ],
+        "KeyName"        : {"Ref" : "KeyName"},
+        "Tags": [
+          {
+              "Key": "Name",
+              "Value": "yellow.ec2"
+          }],
+        "UserData": {
+            "Fn::Base64": {
+              "Fn::Join": [
+                "\n",
+                [
+                  "#!/bin/bash",
+                  "yum update -y",
+                  "yum install httpd -y",
+                  "yum install tcpdump -y",
+                  "service httpd start",
+                  "/etc/init.d/httpd start",
+                  "chkconfig --levels 235 httpd on",
+                  "cd /var/www/html",
+                  "echo \"<html><body style=\\\"background-color:yellow;\\\"><h1><p style=\\\"color:#000000\\\">Hello Cloud Welcome To My Webpage</h1></body></html>\" > index.html"
+                ]
+              ]
+            }
+        }
+      }
+    },
+    "BlueInstance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId" : "ami-03ca998611da0fe12",
+        "InstanceType"   : "t3.micro",
+        "IamInstanceProfile" : {"Ref" : "InstanceProfile"},
+        "NetworkInterfaces" : [ {"NetworkInterfaceId" : {"Ref" : "BlueENI"}, "DeviceIndex" : "0" } ],
+        "KeyName"        : {"Ref" : "KeyName"},
+        "Tags": [
+          {
+              "Key": "Name",
+              "Value": "blue.ec2"
+          }],
+        "UserData": {
+            "Fn::Base64": {
+              "Fn::Join": [
+                "\n",
+                [
+                  "#!/bin/bash",
+                  "yum update -y",
+                  "yum install httpd -y",
+                  "yum install tcpdump -y",
+                  "service httpd start",
+                  "/etc/init.d/httpd start",
+                  "chkconfig --levels 235 httpd on",
+                  "cd /var/www/html",
+                  "echo \"<html><body style=\\\"background-color:blue;\\\"><h1><p style=\\\"color:#FFFFFF\\\">Hello Cloud Welcome To My Webpage</h1></body></html>\" > index.html"
+                ]
+              ]
+            }
+        }
+      }
+    },
+    "GreenInstance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId" : "ami-03ca998611da0fe12",
+        "InstanceType"   : "t3.micro",
+        "IamInstanceProfile" : {"Ref" : "InstanceProfile"},
+        "NetworkInterfaces" : [ {"NetworkInterfaceId" : {"Ref" : "GreenENI"}, "DeviceIndex" : "0" } ],
+        "KeyName"        : {"Ref" : "KeyName"},
+        "Tags": [
+          {
+              "Key": "Name",
+              "Value": "green.ec2"
+          }],
+        "UserData": {
+            "Fn::Base64": {
+              "Fn::Join": [
+                "\n",
+                [
+                  "#!/bin/bash",
+                  "yum update -y",
+                  "yum install httpd -y",
+                  "yum install tcpdump -y",
+                  "service httpd start",
+                  "/etc/init.d/httpd start",
+                  "chkconfig --levels 235 httpd on",
+                  "cd /var/www/html",
+                  "echo \"<html><body style=\\\"background-color:green;\\\"><h1><p style=\\\"color:#FFFFFF\\\">Hello Cloud Welcome To My Webpage</h1></body></html>\" > index.html"
+                ]
+              ]
+            }
+        }
+      }
+    },
+    "WebServerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable HTTP and HTTPS",
+        "VpcId": {
+          "Ref": "cftvpc"
+        },
+        "SecurityGroupIngress" : [
+          {"IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIp" : "0.0.0.0/0"},
+          {"IpProtocol" : "tcp", "FromPort" : "443", "ToPort" : "443", "CidrIp" : "0.0.0.0/0"}
+        ]
+      }
+    }
+  },
+  "Outputs" : {
+      "RedURL" : {
+      "Description" : "URL for EC2 Red instance",
+      "Value" : { "Fn::Join" : ["", ["http://", { "Fn::GetAtt" : [ "RedInstance", "PublicDnsName" ]}]] }
+      },
+      "YellowURL" : {
+        "Description" : "URL for EC2 Yellow instance",
+        "Value" : { "Fn::Join" : ["", ["http://", { "Fn::GetAtt" : [ "YellowInstance", "PublicDnsName" ]}]] }
+      },
+      "GreenURL" : {
+        "Description" : "URL for EC2 Green instance",
+        "Value" : { "Fn::Join" : ["", ["http://", { "Fn::GetAtt" : [ "GreenInstance", "PublicDnsName" ]}]] }
+      },
+      "BlueURL" : {
+        "Description" : "URL for EC2 Blue instance",
+        "Value" : { "Fn::Join" : ["", ["http://", { "Fn::GetAtt" : [ "BlueInstance", "PublicDnsName" ]}]] }
+      }
+  }
+}

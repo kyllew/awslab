@@ -1,0 +1,68 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "AWS CloudFormation - Create EC2 server in North Virgina region",
+
+  "Parameters" : {
+    "KeyName": {
+      "Description" : "Existing EC2 KeyPair :",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "ConstraintDescription" : "Can contain only ASCII characters."
+    }
+  },
+
+  "Resources" : {
+    "InstanceProfile" : {
+        "Type" : "AWS::IAM::InstanceProfile",
+        "Properties" : {
+          "Path" : "/",
+          "Roles" : ["s3.full.iam.role"]
+        }
+    },
+    "WebServerInstance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId" : "ami-01d025118d8e760db",
+        "InstanceType"   : "t2.small",
+        "IamInstanceProfile" : {"Ref" : "InstanceProfile"},
+        "SecurityGroups" : [{"Ref" : "WebServerSecurityGroup"}],
+        "KeyName"        : {"Ref" : "KeyName"},
+        "UserData": {
+            "Fn::Base64": {
+              "Fn::Join": [
+                "\n",
+                [
+                  "#!/bin/bash",
+                  "yum update -y",
+                  "yum install httpd -y",
+                  "yum install tcpdump -y",
+                  "/etc/init.d/httpd start",
+                  "chkconfig httpd on",
+                  "cd /var/www/html",
+                  "mkdir file",
+                  "aws s3 cp s3://wks3cf/200MB.zip /var/www/html/file/200MB.zip",
+                  "aws s3 cp s3://wks3cf/index.html /var/www/html/index.html"
+                ]
+              ]
+            }
+        }
+      }
+    },
+    "WebServerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable HTTP and ssh",
+        "SecurityGroupIngress" : [
+          {"IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIp" : "0.0.0.0/0"},
+          {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0"}
+        ]
+      }
+    }
+  },
+    "Outputs" : {
+      "WebsiteURL" : {
+      "Description" : "URL for EC2 instance",
+      "Value" : { "Fn::Join" : ["", ["http://", { "Fn::GetAtt" : [ "WebServerInstance", "PublicDnsName" ]}]] }
+      }
+    }
+}

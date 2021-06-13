@@ -1,0 +1,188 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Parameters" : {
+        "KeyName": {
+          "Description" : "Existing EC2 KeyPair :",
+          "Type": "AWS::EC2::KeyPair::KeyName",
+          "ConstraintDescription" : "Can contain only ASCII characters."
+        }
+      },
+    "Resources": {
+        "sydvpc80": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.80.0.0/16",
+                "EnableDnsHostnames" : "True",
+                "EnableDnsSupport" : "True",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "syd.cft.vpc1"
+                    }
+                ]
+            }
+        },
+        "sydpubAsubnet1": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": "ap-southeast-2a",
+                "CidrBlock": "10.80.11.0/24",
+                "MapPublicIpOnLaunch": "True",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "syd.cft.pubA.subnet1"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "sydvpc80"
+                }
+            }
+        },
+        "sydpubBsubnet1": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": "ap-southeast-2a",
+                "CidrBlock": "10.80.21.0/24",
+                "MapPublicIpOnLaunch": "True",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "syd.cft.pubB.subnet1"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "sydvpc80"
+                }
+            }
+        },
+        "sydpub1rtb1": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "sydvpc80"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "syd.pub1.cft.rtb"
+                    }
+                ]
+            }
+        },
+        "SubnetAssoc1": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "sydpub1rtb1"
+                },
+                "SubnetId": {
+                    "Ref": "sydpubAsubnet1"
+                }
+            }
+        },
+        "SubnetAssoc2": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "sydpub1rtb1"
+                },
+                "SubnetId": {
+                    "Ref": "sydpubBsubnet1"
+                }
+            }
+        },
+        "sydpubroute1": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "sydpub1rtb1"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "sydigw1"
+                }
+            }
+        },
+        "sydigw1": {
+            "Type": "AWS::EC2::InternetGateway",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "syd.cft.igw1"
+                    }
+                ]
+            }
+        },
+        "AttachGateway": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "sydvpc80"
+                },
+                "InternetGatewayId": {
+                    "Ref": "sydigw1"
+                }
+            }
+        },
+        "InstanceProfile" : {
+            "Type" : "AWS::IAM::InstanceProfile",
+            "Properties" : {
+                  "Path" : "/",
+                  "Roles" : ["s3.full.iam.role"]
+            }
+        },
+        "WebServerSecurityGroup" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+                "VpcId": {
+                    "Ref": "sydvpc80"
+                },
+                "GroupDescription" : "Enable HTTP and ssh",
+                "SecurityGroupIngress" : [
+                    {"IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIp" : "0.0.0.0/0"},
+                    {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0"}
+                  ]
+                }
+        },
+        "NetIface" : {
+            "Type" : "AWS::EC2::NetworkInterface",
+            "Properties" : {
+                  "SubnetId" : { "Ref" : "sydpubAsubnet1" },
+                  "Description" :"Interface for web traffic",
+                  "GroupSet" : [ {"Ref" : "WebServerSecurityGroup"} ],
+                  "SourceDestCheck" : "true",
+                  "Tags" :  [{"Key" : "Name", "Value" : "syd.cft.ec2"}]
+            }
+        },
+        "WebServerInstance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "ImageId" : "ami-0a58e22c727337c51",
+                "InstanceType"   : "t2.small",
+                "IamInstanceProfile" : {"Ref" : "InstanceProfile"},
+                "NetworkInterfaces" : [{ "NetworkInterfaceId" : {"Ref" : "NetIface"}, "DeviceIndex" : "0" }],
+                "KeyName"        : {"Ref" : "KeyName"},
+                "UserData": {
+                    "Fn::Base64": {
+                      "Fn::Join": [
+                        "\n",
+                        [
+                            "#!/bin/bash",
+                            "yum update -y",
+                            "yum install httpd -y",
+                            "yum install stress -y",
+                            "yum install tcpdump -y",
+                            "/etc/init.d/httpd start",
+                            "chkconfig --levels 235 httpd on",
+                            "cd /var/www/html",
+                            "aws s3 cp s3://wks3cf/indexsyd.html /var/www/html/index.html"
+                        ]
+                      ]
+                    }
+                }
+            }
+        }
+    }
+}

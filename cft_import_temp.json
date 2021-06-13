@@ -1,0 +1,36 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Resources": {
+        "sinvpc40": {
+            "Type": "AWS::EC2::VPC",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "CidrBlock": "10.40.0.0/16",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "sin40.cft.vpc"
+                    }
+                ]
+            }
+        },
+        "pubsubnet1": {
+            "Type": "AWS::EC2::Subnet",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AvailabilityZone": "ap-southeast-1a",
+                "CidrBlock": "10.40.1.0/24",
+                "MapPublicIpOnLaunch": "True",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "sin40.1.cft.subnet"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "sinvpc40"
+                }
+            }
+        }
+    }
+}

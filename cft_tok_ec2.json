@@ -1,0 +1,41 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "AWS CloudFormation - Create EC2 server in North Virgina region",
+
+  "Parameters" : {
+    "KeyName": {
+      "Description" : "Existing EC2 KeyPair :",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "ConstraintDescription" : "Can contain only ASCII characters."
+    }
+  },
+
+  "Resources" : {
+    "WebServerInstance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId" : "ami-0ee1410f0644c1cac",
+        "InstanceType"   : "t2.micro",
+        "SecurityGroups" : [{"Ref" : "WebServerSecurityGroup"}],
+        "KeyName"        : {"Ref" : "KeyName"}
+      }
+    },
+    "WebServerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable HTTP and ssh",
+        "SecurityGroupIngress" : [
+          {"IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIp" : "0.0.0.0/0"},
+          {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0"}
+        ]
+      }
+    }
+  },
+    "Outputs" : {
+      "WebsiteURL" : {
+      "Description" : "URL for EC2 instance",
+      "Value" : { "Fn::Join" : ["", ["http://", { "Fn::GetAtt" : [ "WebServerInstance", "PublicDnsName" ]}]] }
+      }
+    }
+}

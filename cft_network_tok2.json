@@ -1,0 +1,93 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Resources": {
+        "tokvpc2": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.2.0.0/16",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "tok.cft.vpc2"
+                    }
+                ]
+            }
+        },
+        "tokpub2subnet1": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": "ap-northeast-1c",
+                "CidrBlock": "10.2.1.0/24",
+                "MapPublicIpOnLaunch": "True",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "tok.cft.pub2.subnet1"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "tokvpc2"
+                }
+            }
+        },
+        "tokpub2rtb1": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "tokvpc2"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "tok.pub2.rtb1"
+                    }
+                ]
+            }
+        },
+        "SubnetAssoc": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "tokpub2rtb1"
+                },
+                "SubnetId": {
+                    "Ref": "tokpub2subnet1"
+                }
+            }
+        },
+        "tokpub2route1": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "tokpub2rtb1"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "tokigw2"
+                }
+            }
+        },
+        "tokigw2": {
+            "Type": "AWS::EC2::InternetGateway",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "tok.cft.igw2"
+                    }
+                ]
+            }
+        },
+        "AttachGateway": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "tokvpc2"
+                },
+                "InternetGatewayId": {
+                    "Ref": "tokigw2"
+                }
+            }
+        }
+    }
+}

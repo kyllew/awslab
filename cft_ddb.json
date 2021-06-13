@@ -1,0 +1,24 @@
+{
+  "Resources" : {
+    "table" : {
+      "Type" : "AWS::DynamoDB::Table",
+      "Properties" : {
+        "TableName" : "student_dataX",
+        "ProvisionedThroughput" : {"ReadCapacityUnits" : 1, "WriteCapacityUnits" : 1},
+        "KeySchema" :
+        [
+          //Hash = Partition Key
+          //Range = Sort Key 
+          {"AttributeName" : "student_id", "KeyType" : "HASH"},
+          {"AttributeName" : "dateandtime", "KeyType" : "RANGE"}
+        ],
+        "AttributeDefinitions" :
+        [
+          //Give data type S = string
+          {"AttributeName" : "student_id", "AttributeType" : "S"},
+          {"AttributeName" : "dateandtime", "AttributeType" : "S"}
+        ]
+      }
+    }
+  }
+}

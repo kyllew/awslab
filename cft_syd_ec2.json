@@ -1,0 +1,82 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "AWS CloudFormation - Create EC2 server in North Virgina region",
+
+  "Parameters" : {
+    "KeyName": {
+      "Description" : "Existing EC2 KeyPair :",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "ConstraintDescription" : "Can contain only ASCII characters."
+    },
+    "SubnetIDs" : {
+        "Description" : "Subnet IDs",
+        "Type" : "AWS::EC2::Subnet::Id"
+    }
+  },
+
+  "Resources" : {
+    "InstanceProfile" : {
+        "Type" : "AWS::IAM::InstanceProfile",
+        "Properties" : {
+          "Path" : "/",
+          "Roles" : ["s3.full.iam.role"]
+        }
+    },
+    "WebServerSecurityGroup" : {
+        "Type" : "AWS::EC2::SecurityGroup",
+        "VpcId" : { "Ref" : "VPCId" },
+        "Properties" : {
+          "GroupDescription" : "Enable HTTP and ssh",
+          "SecurityGroupIngress" : [
+            {"IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIp" : "0.0.0.0/0"},
+            {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0"}
+          ]
+        }
+    },
+    "NetIface" : {
+        "Type" : "AWS::EC2::NetworkInterface",
+        "Properties" : {
+          "SubnetId" : { "Ref" : "SubnetIDs" },
+          "Description" :"Interface for web traffic",
+          "GroupSet" : [ {"Ref" : "WebServerSecurityGroup"} ],
+          "SourceDestCheck" : "true",
+          "Tags" :  [{"Key" : "Name", "Value" : "syd.cft.ec2"}]
+        }
+    },
+    "WebServerInstance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId" : "ami-0a58e22c727337c51",
+        "InstanceType"   : "t2.small",
+        "IamInstanceProfile" : {"Ref" : "InstanceProfile"},
+        "NetworkInterfaces" : { "NetworkInterfaceId" : {"Ref" : "NetIface"}, "DeviceIndex" : "0" },
+        "SecurityGroups" : [{"Ref" : "WebServerSecurityGroup"}],
+        "KeyName"        : {"Ref" : "KeyName"},
+        "UserData": {
+            "Fn::Base64": {
+              "Fn::Join": [
+                "\n",
+                [
+                  "#!/bin/bash",
+                  "yum update -y",
+                  "yum install httpd -y",
+                  "yum install tcpdump -y",
+                  "/etc/init.d/httpd start",
+                  "chkconfig httpd on",
+                  "cd /var/www/html",
+                  "aws s3 cp s3://wks3cf/index.html /var/www/html/index.html"
+                ]
+              ]
+            }
+        }
+      }
+    }
+  },
+    "Outputs" : {
+      "WebsiteURL" : {
+      "Description" : "URL for EC2 instance",
+      "Value" : { "Fn::Join" : ["", ["http://", { "Fn::GetAtt" : [ "WebServerInstance", "PublicDnsName" ]}]] }
+      }
+    }
+}

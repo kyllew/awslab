@@ -1,0 +1,80 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "Create 1 EC2 instances as Web service (Red)",
+
+  "Parameters" : {
+    "KeyName": {
+      "Description" : "Existing EC2 KeyPair :",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "ConstraintDescription" : "Can contain only ASCII characters."
+    },
+    "RoleName" : {
+      "Description" : "EC2 role name",
+      "Type" : "String",
+      "ConstraintDescription" : "Please specify your IAM role for EC2"
+    }
+  },
+
+  "Resources" : {
+    "InstanceProfile" : {
+        "Type" : "AWS::IAM::InstanceProfile",
+        "Properties" : {
+          "Path" : "/",
+          "Roles" : [{"Ref" : "RoleName"}]
+        }
+    },
+    "RedENI" : {
+      "Type" : "AWS::EC2::NetworkInterface",
+      "Properties" : {
+        "SubnetId": "subnet-0335ba262be6db8f7",
+        "GroupSet": [{"Fn::GetAtt" : [ "WebServerSecurityGroup" , "GroupId" ]}]
+      }
+    },
+    "RedInstance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId" : "ami-03ca998611da0fe12",
+        "InstanceType"   : "t3.micro",
+        "IamInstanceProfile" : {"Ref" : "InstanceProfile"},
+        "KeyName"        : {"Ref" : "KeyName"},
+        "NetworkInterfaces" : [ {"NetworkInterfaceId" : {"Ref" : "RedENI"}, "DeviceIndex" : "0" } ],
+        "UserData": {
+            "Fn::Base64": {
+              "Fn::Join": [
+                "\n",
+                [
+                  "#!/bin/bash",
+                  "yum update -y",
+                  "yum install httpd -y",
+                  "yum install tcpdump -y",
+                  "service httpd start",
+                  "/etc/init.d/httpd start",
+                  "chkconfig --levels 235 httpd on",
+                  "cd /var/www/html",
+                  "echo \"<html><body style=\\\"background-color:red;\\\"><h1><p style=\\\"color:#FFFFFF\\\">Hello Cloud Welcome To My Webpage</h1></body></html>\" > index.html"
+                ]
+              ]
+            }
+        }
+      }
+    },
+    "WebServerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable HTTP and HTTPS",
+        "VpcId" : "vpc-00ca54ee89c02ae4b",
+        "SecurityGroupIngress" : [
+          {"IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIp" : "0.0.0.0/0"},
+          {"IpProtocol" : "tcp", "FromPort" : "443", "ToPort" : "443", "CidrIp" : "0.0.0.0/0"}
+        ]
+      }
+    }
+  },
+    "Outputs" : {
+      "WebsiteURL" : {
+      "Description" : "URL for EC2 instance",
+      "Value" : { "Fn::Join" : ["", ["http://", { "Fn::GetAtt" : [ "RedInstance", "PublicDnsName" ]}]] }
+      }
+    }
+}

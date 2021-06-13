@@ -1,0 +1,21 @@
+{
+  "Resources" : {
+    "dbprodtable" : {
+      "Type" : "AWS::DynamoDB::Table",
+      "Properties" : {
+        "TableName" : "class_data",
+        "ProvisionedThroughput" : {"ReadCapacityUnits" : 1, "WriteCapacityUnits" : 1},
+        "KeySchema" :
+        [
+          {"AttributeName" : "course_id", "KeyType" : "HASH"},
+          {"AttributeName" : "dateandtime", "KeyType" : "RANGE"}
+        ],
+        "AttributeDefinitions" :
+        [
+          {"AttributeName" : "course_id", "AttributeType" : "S"},
+          {"AttributeName" : "dateandtime", "AttributeType" : "S"}
+        ]
+      }
+    }
+  }
+}
